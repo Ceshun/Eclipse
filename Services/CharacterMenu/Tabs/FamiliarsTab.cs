@@ -75,6 +75,8 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
     private const float FamiliarBoxRefreshCooldownSeconds = 8f;
     private const float FamiliarBoxSwitchDelaySeconds = 2.1f;
     private const float FamiliarModeTabsHeight = 32f;
+    private const int FamiliarContentPaddingTop = 12;
+    private const int FamiliarContentPaddingBottom = 36;
     private const float FamiliarModeTabFontScale = 0.5f;
     private const float FamiliarConfirmWindowSeconds = 2.5f;
 
@@ -255,11 +257,16 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
             return;
         }
 
-        if (!_familiarSystemEnabled)
+        // Do not use _familiarSystemEnabled as the top-level gate here.
+        // That flag is only populated by the optional FamiliarBattleData packet; on modern BloodCraft
+        // servers the normal familiar HUD/progress data can be present even when that battle packet
+        // has not arrived yet. If the user enabled the Familiar UI option, show the panel and let
+        // individual battle/talent sections handle their own missing-data states.
+        if (!global::Eclipse.Plugin.Familiars)
         {
             if (_statusText != null)
             {
-                _statusText.text = "Familiars are disabled on this server.";
+                _statusText.text = "Familiar UI disabled in Eclipse config.";
                 _statusText.gameObject.SetActive(true);
             }
 
@@ -500,6 +507,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         TextMeshProUGUI labelText = tmpLabel as TextMeshProUGUI;
         if (labelText != null)
         {
+            ConfigureFamiliarClippedTabLabel(labelText);
             labelText.color = FamiliarModeTabInactiveTextColor;
         }
 
@@ -548,6 +556,17 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         }
     }
 
+    private static void ConfigureFamiliarClippedTabLabel(TextMeshProUGUI label)
+    {
+        if (label == null)
+        {
+            return;
+        }
+
+        label.maskable = true;
+        label.raycastTarget = false;
+    }
+
     private Transform CreateFamiliarsContentRoot(Transform parent, TextMeshProUGUI reference)
     {
         RectTransform rectTransform = CreateRectTransformObject("FamiliarContentRoot", parent);
@@ -560,8 +579,11 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         rectTransform.pivot = new Vector2(0f, 1f);
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
-        EnsureVerticalLayout(rectTransform, spacing: FamiliarSectionSpacing);
+        EnsureVerticalLayout(rectTransform, paddingTop: FamiliarContentPaddingTop,
+            paddingBottom: FamiliarContentPaddingBottom, spacing: FamiliarSectionSpacing);
 
+        // Keep the inner Familiar/Battles/Talents row as part of the familiar body.
+        // Moving it outside this content root caused the familiar panel to collapse/shrink.
         CreateModeTabs(rectTransform, reference);
 
         _manageRoot = CreateRectTransformObject("FamiliarsManageRoot", rectTransform);
@@ -613,7 +635,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         topLayout.childAlignment = TextAnchor.UpperLeft;
         topLayout.spacing = FamiliarColumnSpacing;
         topLayout.childForceExpandWidth = true;
-        topLayout.childForceExpandHeight = true;
+        topLayout.childForceExpandHeight = false;
         topLayout.childControlWidth = true;
         topLayout.childControlHeight = true;
 
@@ -732,11 +754,15 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
 
     private void CreateFamiliarBoxCard(Transform parent, TextMeshProUGUI reference)
     {
-        RectTransform card = CreateFamiliarCard(parent, "FamiliarBoxCard", stretchHeight: true);
+        RectTransform card = CreateFamiliarCard(parent, "FamiliarBoxCard", stretchHeight: false, enforceMinimumHeight: false);
         if (card == null)
         {
             return;
         }
+
+        LayoutElement cardLayout = card.GetComponent<LayoutElement>() ?? card.gameObject.AddComponent<LayoutElement>();
+        cardLayout.minHeight = FamiliarCardMinHeight;
+        cardLayout.flexibleHeight = 0f;
 
         _ = CreateFamiliarSectionLabel(card, reference, "Boxes & Storage", FamiliarHeaderBoxIconSpriteNames);
 
@@ -767,7 +793,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         }
 
         _ = CreateFamiliarDivider(card);
-        CreateOverflowSection(card, reference);
+        // Overflow storage is not supported by the public BloodCraft builds used here.
     }
 
     private void CreateBoxRowActionModeTabs(Transform parent, TextMeshProUGUI reference)
@@ -839,6 +865,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         TextMeshProUGUI labelText = tmpLabel as TextMeshProUGUI;
         if (labelText != null)
         {
+            ConfigureFamiliarClippedTabLabel(labelText);
             labelText.color = FamiliarModeTabInactiveTextColor;
         }
 
@@ -898,7 +925,6 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         _ = CreateFamiliarActionRow(listRoot, reference, "Call / Dismiss Familiar", ".fam t", FamiliarActionIconCallSpriteNames, true);
         _toggleCombatModeLabel = CreateFamiliarActionRow(listRoot, reference, "Toggle Combat Mode", ".fam c", FamiliarActionIconToggleSpriteNames, false);
         _ = CreateFamiliarActionRow(listRoot, reference, "Unbind Familiar", ".fam ub", FamiliarActionIconUnbindSpriteNames, false);
-        _ = CreateFamiliarActionRow(listRoot, reference, "View Overflow", ".fam of", FamiliarActionIconOverflowSpriteNames, false);
         _toggleEmoteActionsLabel = CreateFamiliarActionRow(listRoot, reference, "Toggle Emote Actions", ".fam e", FamiliarActionIconEmoteSpriteNames, false);
         _ = CreateFamiliarActionRow(listRoot, reference, "Show Emote Actions", ".fam actions", FamiliarActionIconShowSpriteNames, false);
         _ = CreateFamiliarActionRow(listRoot, reference, "Get Familiar Level", ".fam gl", FamiliarActionIconLevelSpriteNames, false);
@@ -2109,7 +2135,6 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         ClearPendingFamiliarBoxSwitch();
         Quips.SendCommand($".fam r {slotIndex}");
         Quips.SendCommand(".fam l");
-        Quips.SendCommand(".fam of");
     }
 
     private void TriggerFamiliarBoxSlotBind(int slotIndex)
@@ -2419,7 +2444,7 @@ internal partial class FamiliarsTab : CharacterMenuTabBase, ICharacterMenuTabWit
         {
             UpdateDestinationBoxDropdownOptions();
         }
-        UpdateOverflowPanel();
+        // Overflow storage is disabled; do not auto-send .fam of.
 
         if (_familiarBoxEntries.Count == 0 || _familiarBoxNames.Count == 0 || levelChanged || nameChanged)
         {

@@ -44,7 +44,6 @@ internal partial class FamiliarsTab
         if (actionsRoot != null)
         {
             _ = CreateFamiliarActionRow(actionsRoot, reference, "Move Selected Overflow → Destination", MoveSelectedOverflowToDestination, FamiliarActionIconOverflowSpriteNames, false);
-            _ = CreateFamiliarActionRow(actionsRoot, reference, "Refresh Overflow", () => Quips.SendCommand(".fam of"), FamiliarActionIconSearchSpriteNames, false);
         }
     }
 
@@ -62,7 +61,7 @@ internal partial class FamiliarsTab
             if (now - _overflowLastRefreshTime > FamiliarBoxRefreshCooldownSeconds)
             {
                 _overflowLastRefreshTime = now;
-                Quips.SendCommand(".fam of");
+                // Overflow disabled: public BloodCraft server does not support .fam of
             }
         }
 
@@ -126,8 +125,8 @@ internal partial class FamiliarsTab
             return;
         }
 
-        Quips.SendCommand($".fam om {_selectedOverflowIndex.ToString(CultureInfo.InvariantCulture)} {QuoteChatArgument(destination)}");
-        Quips.SendCommand(".fam of");
+        // Overflow disabled: public BloodCraft server does not support .fam om
+        // Overflow disabled: public BloodCraft server does not support .fam of
         Quips.SendCommand(".fam l");
     }
 

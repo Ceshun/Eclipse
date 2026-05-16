@@ -1,4 +1,4 @@
-﻿using Eclipse.Services;
+using Eclipse.Services;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
 using ProjectM;
@@ -45,7 +45,7 @@ internal static class ClientChatSystemPatch
     };
 
     public const string V1_3 = "1.3";
-    public const string VERSION = MyPluginInfo.PLUGIN_VERSION;
+    public const string VERSION = "1.3.14"; // Force exact protocol version so BloodCraft treats this UI merge as a supported Eclipse 1.3 client
     public enum NetworkEventSubType
     {
         RegisterUser,
@@ -197,9 +197,11 @@ internal static class ClientChatSystemPatch
                         DataService.ParseClassData(_regexExtract.Replace(message, ""));
                         break;
                     case (int)NetworkEventSubType.PrestigeLeaderboardToClient:
+                        Core.Log.LogInfo("[Eclipse Data] PrestigeLeaderboardToClient received.");
                         DataService.ParsePrestigeLeaderboardData(_regexExtract.Replace(message, ""));
                         break;
                     case (int)NetworkEventSubType.ExoFormDataToClient:
+                        Core.Log.LogInfo("[Eclipse Data] ExoFormDataToClient received.");
                         DataService.ParseExoFormData(_regexExtract.Replace(message, ""));
                         break;
                     case (int)NetworkEventSubType.FamiliarBattleDataToClient:

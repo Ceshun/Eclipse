@@ -11,7 +11,7 @@ internal static class HudConfiguration
     public static bool LegacyBarEnabled => Plugin.Legacies;
     public static bool ExpertiseBarEnabled => Plugin.Expertise;
     public static bool FamiliarBarEnabled => Plugin.Familiars;
-    public static bool ProfessionBarsEnabled => Plugin.Professions;
+    public static bool ProfessionBarsEnabled => Plugin.ProfessionUi;
     public static bool QuestTrackerEnabled => Plugin.Quests;
     public static bool ShiftSlotEnabled => Plugin.ShiftSlot;
     public static bool ClassUiEnabled => Plugin.ClassUi;

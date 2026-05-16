@@ -99,7 +99,18 @@ internal static class HudUpdateManager
 
     public static DynamicBuffer<ModifyUnitStatBuff_DOTS> TryGetSourceBuffer()
     {
-        if (!ModifyUnitStatBuffLookup.TryGetBuffer(LocalCharacter, out var buffer))
+        if (!TryGetStatBuffLookup(out BufferLookup<ModifyUnitStatBuff_DOTS> lookup))
+        {
+            return default;
+        }
+
+        Entity localCharacter = LocalCharacter;
+        if (!localCharacter.Exists())
+        {
+            return default;
+        }
+
+        if (!lookup.TryGetBuffer(localCharacter, out var buffer))
             return default;
 
         return buffer;
@@ -110,10 +121,17 @@ internal static class HudUpdateManager
         if (!sourceBuffer.IsCreated)
             return;
 
-        if (!LocalCharacter.TryGetBuff(StatBuff, out Entity buff))
+        if (!TryGetStatBuffLookup(out BufferLookup<ModifyUnitStatBuff_DOTS> lookup))
             return;
 
-        if (!ModifyUnitStatBuffLookup.TryGetBuffer(buff, out var targetBuffer))
+        Entity localCharacter = LocalCharacter;
+        if (!localCharacter.Exists())
+            return;
+
+        if (!localCharacter.TryGetBuff(StatBuff, out Entity buff) || !buff.Exists())
+            return;
+
+        if (!lookup.TryGetBuffer(buff, out var targetBuffer))
             return;
 
         targetBuffer.CopyFrom(sourceBuffer);
@@ -141,7 +159,10 @@ internal static class HudUpdateManager
         {
             TryInitializeAttributeValues();
 
-            if (AttributesInitialized && !ModifyUnitStatBuffLookup.TryGetBuffer(LocalCharacter, out var buffer))
+            if (AttributesInitialized
+                && TryGetStatBuffLookup(out BufferLookup<ModifyUnitStatBuff_DOTS> lookup)
+                && LocalCharacter.Exists()
+                && !lookup.TryGetBuffer(LocalCharacter, out var buffer))
             {
                 buffer = EntityManager.AddBuffer<ModifyUnitStatBuff_DOTS>(LocalCharacter);
 
@@ -493,6 +514,19 @@ internal static class HudUpdateManager
             progressFill.fillAmount = progress;
             fill.fillAmount = level / MAX_PROFESSION_LEVEL;
         }
+    }
+
+    static bool TryGetStatBuffLookup(out BufferLookup<ModifyUnitStatBuff_DOTS> lookup)
+    {
+        lookup = ModifyUnitStatBuffLookup;
+
+        if (lookup.Equals(default(BufferLookup<ModifyUnitStatBuff_DOTS>)))
+        {
+            return false;
+        }
+
+        Entity localCharacter = LocalCharacter;
+        return localCharacter.Exists();
     }
 
     #endregion

@@ -551,32 +551,31 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         }
         else
         {
-            UpdateHeader("Mock Sword", selectedCount: 0, maxChoices: 3, level: 67, progress01: 0.45f);
-            UpdateHeaderIcon(DefaultWeaponIconSpriteNames);
+            // Modern BloodCraft 1.13.x does not always send the optional WeaponStatBonusData packet
+            // that the DiNaSoR UI fork expected. Fall back to the normal Eclipse ProgressToClient
+            // expertise data, which is the same data source used by the working HUD/attribute buttons.
+            string weaponType = string.IsNullOrWhiteSpace(_expertiseType) ? "Weapon Expertise" : _expertiseType;
+            int selectedCount = CountSelectedWeaponStats(_expertiseBonusStats);
+            const int maxChoices = 3;
 
-            List<StatBonusEntry> mockEntries =
-            [
-                new StatBonusEntry(1, "Max Health", 250f, false),
-                new StatBonusEntry(2, "Movement Speed", 0.15f, false),
-                new StatBonusEntry(3, "Primary Attack Speed", 0.12f, false),
-                new StatBonusEntry(4, "Physical Life Leech", 0.05f, false),
-                new StatBonusEntry(5, "Spell Life Leech", 0.05f, false),
-                new StatBonusEntry(6, "Primary Life Leech", 0.05f, false),
-                new StatBonusEntry(7, "Physical Power", 15f, false),
-                new StatBonusEntry(8, "Spell Power", 15f, false),
-                new StatBonusEntry(9, "Physical Crit Chance", 0.08f, false),
-                new StatBonusEntry(10, "Physical Crit Damage", 0.25f, false),
-                new StatBonusEntry(11, "Spell Crit Chance", 0.08f, false),
-                new StatBonusEntry(12, "Spell Crit Damage", 0.25f, false)
-            ];
+            UpdateHeader(weaponType, selectedCount, maxChoices, _expertiseLevel, _expertiseProgress);
+            UpdateHeaderIcon(GetWeaponTypeIconSprites(weaponType));
 
-            EnsureRows(mockEntries.Count);
-            int rowCount = Math.Min(mockEntries.Count, _rows.Count);
+            List<StatBonusEntry> entries = BuildWeaponStatEntries(_expertiseBonusStats);
+            EnsureRows(entries.Count);
 
-            Action<int> onMockClicked = (statIndex) => Core.Log.LogInfo($"[Mock] Clicked weapon stat index: {statIndex}");
+            int rowCount = Math.Min(entries.Count, _rows.Count);
+            Action<int> onClicked = (index) =>
+            {
+                string command = string.IsNullOrWhiteSpace(_expertiseType)
+                    ? $".wep cst {index}"
+                    : $".wep cst {_expertiseType} {index}";
+                Quips.SendCommand(command);
+            };
+
             for (int i = 0; i < rowCount; i++)
             {
-                UpdateRow(_rows[i], mockEntries[i], entry => FormatWeaponStatValue(entry.StatIndex, entry.Value), onMockClicked);
+                UpdateRow(_rows[i], entries[i], entry => FormatWeaponStatValue(entry.StatIndex, entry.Value), onClicked);
             }
         }
     }
@@ -629,6 +628,65 @@ internal class StatBonusesTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
         _weaponImage.type = Image.Type.Simple;
         _weaponImage.preserveAspect = true;
         _weaponImage.color = new Color(1f, 1f, 1f, 0.9f);
+    }
+
+    private static int CountSelectedWeaponStats(IReadOnlyList<string> selectedNames)
+    {
+        if (selectedNames == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < selectedNames.Count; i++)
+        {
+            string value = selectedNames[i];
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            if (Enum.TryParse(value, true, out WeaponStatType stat) && stat != WeaponStatType.None)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static List<StatBonusEntry> BuildWeaponStatEntries(IReadOnlyList<string> selectedNames)
+    {
+        List<StatBonusEntry> entries = [];
+
+        foreach (WeaponStatType weaponStat in Enum.GetValues(typeof(WeaponStatType)))
+        {
+            if (weaponStat == WeaponStatType.None)
+            {
+                continue;
+            }
+
+            string statName = HudUtilities.SplitPascalCase(weaponStat.ToString());
+
+            bool isSelected = false;
+            if (selectedNames != null)
+            {
+                isSelected = selectedNames.Contains(weaponStat.ToString());
+            }
+
+            float statValue = 0f;
+            if (_weaponStatValues.TryGetValue(weaponStat, out float baseCap))
+            {
+                float classMultiplier = HudUtilities.ClassSynergy(weaponStat, _classType, _classStatSynergies);
+                float prestigeMultiplier = 1f + (_prestigeStatMultiplier * _expertisePrestige);
+                float levelMultiplier = _expertiseMaxLevel > 0 ? ((float)_expertiseLevel / _expertiseMaxLevel) : 0f;
+                statValue = baseCap * prestigeMultiplier * classMultiplier * levelMultiplier;
+            }
+
+            entries.Add(new StatBonusEntry((int)weaponStat, statName, statValue, isSelected));
+        }
+
+        return entries;
     }
 
     private static int CountSelectedLegacyStats(IReadOnlyList<string> selectedNames)

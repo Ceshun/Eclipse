@@ -1,4 +1,4 @@
-﻿using Eclipse.Patches;
+using Eclipse.Patches;
 using Eclipse.Resources;
 using Eclipse.Utilities;
 using Il2CppInterop.Runtime;
@@ -1172,7 +1172,7 @@ internal class CanvasService
         public static readonly bool _legacyBar = Plugin.Legacies;
         public static readonly bool _expertiseBar = Plugin.Expertise;
         public static readonly bool _familiarBar = Plugin.Familiars;
-        public static readonly bool _professionBars = Plugin.Professions;
+        public static readonly bool _professionBars = Plugin.ProfessionUi;
         public static readonly bool _questTracker = Plugin.Quests;
         public static readonly bool _shiftSlot = Plugin.ShiftSlot;
         public static readonly bool _classUi = Plugin.ClassUi;

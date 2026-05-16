@@ -28,23 +28,27 @@ internal class Plugin : BasePlugin
     static ConfigEntry<bool> _expertise;
     static ConfigEntry<bool> _familiars;
     static ConfigEntry<bool> _professions;
+    static ConfigEntry<bool> _professionUi;
     static ConfigEntry<bool> _quests;
     static ConfigEntry<bool> _shiftSlot;
     static ConfigEntry<bool> _classUi;
     static ConfigEntry<bool> _tabsUi;
     static ConfigEntry<bool> _attributeBuffs;
+    static ConfigEntry<bool> _layoutEditor;
     static ConfigEntry<bool> _eclipsed;
     public static bool Leveling => _leveling.Value;
     public static bool Prestige => _prestige.Value;
     public static bool Legacies => _legacies.Value;
     public static bool Expertise => _expertise.Value;
     public static bool Familiars => _familiars.Value;
-    public static bool Professions => _professions.Value;
+    public static bool Professions => _professions != null && _professions.Value; // Character > Bloodcraft > Professions tab only
+    public static bool ProfessionUi => _professionUi != null ? _professionUi.Value : true; // floating on-screen profession bars only
     public static bool Quests => _quests.Value;
     public static bool ShiftSlot => _shiftSlot.Value;
-    public static bool ClassUi => _classUi.Value;
-    public static bool TabsUi => _tabsUi.Value;
+    public static bool ClassUi => false; // forced off: DiNaSoR floating class windows are not part of the Character > Bloodcraft tab
+    public static bool TabsUi => false;  // forced off: DiNaSoR floating tab windows are not part of the Character > Bloodcraft tab
     public static bool AttributeBuffsEnabled => _attributeBuffs != null && _attributeBuffs.Value;
+    public static bool LayoutEditorEnabled => _layoutEditor != null && _layoutEditor.Value;
     public static bool Eclipsed => _eclipsed.Value;
     public override void Load()
     {
@@ -75,12 +79,14 @@ internal class Plugin : BasePlugin
         _expertise = InitConfigEntry("UIOptions", "ExpertiseBar", true, "Enable/Disable the expertise bar, requires both ClientCompanion/ExpertiseSystem to be enabled in Bloodcraft.");
 
         _familiars = InitConfigEntry("UIOptions", "Familiars", true, "Enable/Disable showing basic familiar details bar, requires both ClientCompanion/FamiliarSystem to be enabled in Bloodcraft.");
-        _professions = InitConfigEntry("UIOptions", "Professions", true, "Enable/Disable the professions tab, requires both ClientCompanion/ProfessionSystem to be enabled in Bloodcraft.");
+        _professions = InitConfigEntry("UIOptions", "Professions", true, "Enable/Disable the Character > Bloodcraft > Professions tab. Use ProfessionUI separately for the floating on-screen profession HUD.");
+        _professionUi = InitConfigEntry("UIOptions", "ProfessionUI", true, "Enable/Disable only the floating on-screen profession HUD bars. The Character > Bloodcraft > Professions tab is controlled by Professions.");
         _quests = InitConfigEntry("UIOptions", "QuestTrackers", true, "Enable/Disable the quest tracker, requires both ClientCompanion/QuestSystem to be enabled in Bloodcraft.");
         _shiftSlot = InitConfigEntry("UIOptions", "ShiftSlot", true, "Enable/Disable the shift slot, requires both ClientCompanion and shift slot spell to be enabled in Bloodcraft.");
         _classUi = InitConfigEntry("UIOptions", "ClassUI", false, "Enable/Disable the class selection and spell list panels, requires both ClientCompanion/ClassSystem to be enabled in Bloodcraft.");
         _tabsUi = InitConfigEntry("UIOptions", "TabsUI", false, "Enable/Disable the prestige leaderboard, exoform/shapeshift, and familiar battle tabs.");
-        _attributeBuffs = InitConfigEntry("UIOptions", "AttributeBuffs", true, "Enable/Disable applying Bloodcraft stats to the Attributes tab. Disable if you see ModifiableFloat/StatType errors on newer game versions.");
+        _attributeBuffs = InitConfigEntry("UIOptions", "AttributeBuffs", false, "Enable/Disable applying Bloodcraft stats to the Attributes tab. Disable if you see ModifiableFloat/StatType errors on newer game versions.");
+        _layoutEditor = InitConfigEntry("UIOptions", "LayoutEditor", false, "Enable/Disable the F8 layout editor overlay. Off by default because it is a development tool.");
 
         _eclipsed = InitConfigEntry("UIOptions", "Eclipsed", true, "Set to false for slower update intervals (0.1s -> 1s) if performance is negatively impacted.");
     }

@@ -102,6 +102,7 @@ internal partial class FamiliarsTab
         TextMeshProUGUI text = UIFactory.CreateSubTabLabel(rectTransform, reference, label, FamiliarModeTabFontScale) as TextMeshProUGUI;
         if (text != null)
         {
+            ConfigureFamiliarClippedTabLabel(text);
             text.color = FamiliarModeTabInactiveTextColor;
         }
     }
@@ -144,5 +145,4 @@ internal partial class FamiliarsTab
         }
     }
 }
-
 

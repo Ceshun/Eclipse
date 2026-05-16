@@ -47,6 +47,7 @@ internal static class CharacterMenuService
     const int ContentPaddingTop = 12;
     const int ContentPaddingBottom = 12;
     const int TabContentPaddingTop = 1;
+    const int FixedSubTabContentPaddingTop = 44;
     const float TabContentSpacing = 0f;
     const int SubTabPaddingLeft = 5;
     const int SubTabPaddingRight = 10;
@@ -103,6 +104,22 @@ internal static class CharacterMenuService
         BloodcraftTab.Professions,
         BloodcraftTab.Familiars
     ];
+
+    static bool IsBloodcraftTabEnabled(BloodcraftTab tab)
+        => tab != BloodcraftTab.Professions || Plugin.Professions;
+
+    static List<BloodcraftTab> GetEnabledBloodcraftTabs()
+    {
+        List<BloodcraftTab> tabs = [];
+        foreach (BloodcraftTab tab in BloodcraftTabOrder)
+        {
+            if (IsBloodcraftTabEnabled(tab))
+            {
+                tabs.Add(tab);
+            }
+        }
+        return tabs;
+    }
 
     static readonly Dictionary<BloodcraftTab, string> BloodcraftTabLabels = new()
     {
@@ -653,7 +670,14 @@ internal static class CharacterMenuService
             return tabRoot;
         }
 
-        subTabRoot = CreateSubTabBar(contentRoot, referenceText, templateButton);
+        Transform fixedSubTabParent = tabContentRoot != null ? tabContentRoot.parent : null;
+        subTabRoot = CreateSubTabBar(fixedSubTabParent ?? contentRoot, referenceText, templateButton);
+        // Render the fixed Bloodcraft tab row above any scrolling content.
+        // This prevents inner tab rows, such as Familiar/Battles/Talents, from drawing over it while scrolling.
+        if (subTabRoot != null)
+        {
+            subTabRoot.SetAsLastSibling();
+        }
 
         Transform bodyRoot = CreatePaddedSectionRoot(contentRoot, "BloodcraftBodyRoot");
         if (bodyRoot == null)
@@ -793,7 +817,7 @@ internal static class CharacterMenuService
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
 
-        EnsureVerticalLayout(rectTransform, spacing: 5f);
+        EnsureVerticalLayout(rectTransform, paddingTop: FixedSubTabContentPaddingTop, spacing: 5f);
         return rectTransform;
     }
 
@@ -955,6 +979,12 @@ internal static class CharacterMenuService
         RectTransform templateRect = templateButton.GetComponent<RectTransform>();
         float baseHeight = templateRect != null && templateRect.rect.height > 0f ? templateRect.rect.height : 36f;
         float targetHeight = baseHeight * SubTabHeightScale + SubTabPaddingTop + SubTabPaddingBottom;
+        // Parent is usually the fixed Viewport now, not the scroll content. Give the bar
+        // a real rect height so it stays fixed while the Bloodcraft content scrolls.
+        rectTransform.SetInsetAndSizeFromParentEdge(RectTransform.Edge.Top, 0f, targetHeight);
+        rectTransform.offsetMin = new Vector2(0f, rectTransform.offsetMin.y);
+        rectTransform.offsetMax = new Vector2(0f, rectTransform.offsetMax.y);
+
         LayoutElement barLayout = rectTransform.gameObject.AddComponent<LayoutElement>();
         barLayout.minHeight = targetHeight;
         barLayout.preferredHeight = targetHeight;
@@ -964,9 +994,11 @@ internal static class CharacterMenuService
         subTabButtons.Clear();
         subTabLabels.Clear();
 
-        for (int i = 0; i < BloodcraftTabOrder.Count; i++)
+        List<BloodcraftTab> enabledTabs = GetEnabledBloodcraftTabs();
+
+        for (int i = 0; i < enabledTabs.Count; i++)
         {
-            BloodcraftTab tab = BloodcraftTabOrder[i];
+            BloodcraftTab tab = enabledTabs[i];
             string label = BloodcraftTabLabels.TryGetValue(tab, out string tabLabel) ? tabLabel : tab.ToString();
             CreateSubTabButton(templateButton, rectTransform, reference, tab, label, i);
         }
@@ -994,7 +1026,12 @@ internal static class CharacterMenuService
         SimpleStunButton button = buttonObject.GetComponent<SimpleStunButton>() ?? buttonObject.AddComponent<SimpleStunButton>();
         button.onClick.RemoveAllListeners();
         BloodcraftTab capturedTab = tab;
-        button.onClick.AddListener((UnityAction)(() => activeTab = capturedTab));
+        button.onClick.AddListener((UnityAction)(() =>
+        {
+            activeTab = capturedTab;
+            ApplyTabVisibility();
+            UpdateEntries();
+        }));
 
         TMP_Text primaryLabel = null;
         TMP_Text[] labels = buttonObject.GetComponentsInChildren<TMP_Text>(true);
@@ -1338,6 +1375,11 @@ internal static class CharacterMenuService
             activeTab = BloodcraftTab.Familiars;
         }
 
+        if (!IsBloodcraftTabEnabled(activeTab))
+        {
+            activeTab = BloodcraftTab.Prestige;
+        }
+
         UpdateSubTabSelection();
         UpdateSectionHeader();
 
@@ -1351,7 +1393,7 @@ internal static class CharacterMenuService
 
         if (professionsRoot != null)
         {
-            professionsRoot.gameObject.SetActive(activeTab == BloodcraftTab.Professions);
+            professionsRoot.gameObject.SetActive(activeTab == BloodcraftTab.Professions && Plugin.Professions);
         }
 
         if (exoformRoot != null)
@@ -1374,7 +1416,7 @@ internal static class CharacterMenuService
             EnsureEntries(0);
             _prestigeTab.UpdatePanel();
         }
-        else if (activeTab == BloodcraftTab.Professions)
+        else if (activeTab == BloodcraftTab.Professions && Plugin.Professions)
         {
             EnsureEntries(0);
             _professionsTab.UpdatePanel();

@@ -111,27 +111,6 @@ internal class ProfessionsTab : CharacterMenuTabBase, ICharacterMenuTabWithPanel
             return;
         }
 
-        if (!HudConfiguration.ProfessionBarsEnabled)
-        {
-            if (_statusText != null)
-            {
-                _statusText.text = "Profession UI disabled.";
-                _statusText.gameObject.SetActive(true);
-            }
-
-            if (_listRoot != null)
-            {
-                _listRoot.gameObject.SetActive(false);
-            }
-
-            if (_summaryText != null)
-            {
-                _summaryText.text = string.Empty;
-            }
-
-            return;
-        }
-
         if (_statusText != null)
         {
             _statusText.text = string.Empty;

@@ -1,4 +1,4 @@
-﻿using Stunlock.Core;
+using Stunlock.Core;
 using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -499,6 +499,60 @@ internal static class DataService
             );
         }
     }
+
+
+    private static void EnsurePrestigeFallbackFromProgress()
+    {
+        if (_prestigeDataReady || !_prestigeSystemEnabled && _experienceMaxLevel <= 0)
+        {
+            return;
+        }
+
+        _prestigeSystemEnabled = true;
+        _prestigeLeaderboardEnabled = true;
+        _prestigeLeaderboards.Clear();
+        _prestigeLeaderboardOrder.Clear();
+
+        void AddPrestige(string key, string label, int value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            _prestigeLeaderboardOrder.Add(key);
+            _prestigeLeaderboards[key] = [new PrestigeLeaderboardEntry(label, value)];
+        }
+
+        AddPrestige("Experience", "You", _experiencePrestige);
+        AddPrestige(string.IsNullOrWhiteSpace(_expertiseType) ? "WeaponExpertise" : _expertiseType, "You", _expertisePrestige);
+        AddPrestige(string.IsNullOrWhiteSpace(_legacyType) ? "BloodLegacy" : _legacyType, "You", _legacyPrestige);
+
+        if (!string.IsNullOrWhiteSpace(_familiarName))
+        {
+            AddPrestige("Familiar", _familiarName, _familiarPrestige);
+        }
+
+        _prestigeDataReady = true;
+    }
+
+    private static void EnsureExoFallbackFromProgress()
+    {
+        if (_exoFormDataReady)
+        {
+            return;
+        }
+
+        _exoFormEnabled = true;
+        _exoFormEntries.Clear();
+
+        // Fallback forms for servers that do not send ExoFormDataToClient to this client.
+        // The real payload, when received, will overwrite these placeholders.
+        _exoFormEntries.Add(new ExoFormEntry("EvolvedVampire", _experiencePrestige > 0 || _exoFormPrestiges > 0, []));
+        _exoFormEntries.Add(new ExoFormEntry("CorruptedSerpent", _experiencePrestige > 0 || _exoFormPrestiges > 0, []));
+        _exoFormDataReady = true;
+    }
+
     public static List<string> ParseMessageString(string serverMessage)
     {
         if (string.IsNullOrEmpty(serverMessage))
@@ -699,6 +753,7 @@ internal static class DataService
             }
 
             _prestigeDataReady = true;
+            Core.Log.LogInfo($"[Eclipse Data] Prestige parsed: enabled={_prestigeSystemEnabled}, leaderboard={_prestigeLeaderboardEnabled}, types={_prestigeLeaderboardOrder.Count}");
         }
         catch (Exception ex)
         {
@@ -794,6 +849,7 @@ internal static class DataService
             }
 
             _exoFormDataReady = true;
+            Core.Log.LogInfo($"[Eclipse Data] Exoform parsed: enabled={_exoFormEnabled}, forms={_exoFormEntries.Count}, prestiges={_exoFormPrestiges}");
         }
         catch (Exception ex)
         {
@@ -1369,6 +1425,12 @@ internal static class DataService
         _familiarName = familiarData.FamiliarName;
         _familiarStats = familiarData.FamiliarStats;
 
+        // ProgressToClient contains familiar progress/name/stats and is enough to prove that the
+        // familiar system is active for the normal character-menu familiar panel. The old DiNaSoR
+        // UI only flipped this flag from FamiliarBattleData, which made modern servers show
+        // "Familiars are disabled" even while familiar data was clearly being synced.
+        _familiarSystemEnabled = true;
+
         _enchantingProgress = professionData.EnchantingProgress;
         _enchantingLevel = professionData.EnchantingLevel;
         _alchemyProgress = professionData.AlchemyProgress;
@@ -1400,5 +1462,8 @@ internal static class DataService
 
         ShiftSpellData shiftSpellData = new(playerData[index]);
         _shiftSpellIndex = shiftSpellData.ShiftSpellIndex;
+
+        EnsurePrestigeFallbackFromProgress();
+        EnsureExoFallbackFromProgress();
     }
 }

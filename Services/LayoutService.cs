@@ -207,7 +207,7 @@ internal static class LayoutService
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F8))
+            if (Plugin.LayoutEditorEnabled && Input.GetKeyDown(KeyCode.F8))
             {
                 _active = !_active;
                 Core.Log.LogInfo($"[Layout] {WindowTitle}: {(_active ? "ON" : "OFF")} - {Elements.Count} elements registered");
